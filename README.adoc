@@ -4,15 +4,16 @@ This pipeline combines BRAKER4 gene predictions with Helixer-specific models to 
 
 == Requirements
 
-The workflow requires different software in a conda environment and/or containers. Environment activation and container execution are not included in the scripts and must be configured by the user. We recommend setting up a conda environment with the tools listed below:
+The workflow requires different software in a conda environment and/or containers. Environment activation and container execution are not included in the scripts and must be configured by the user. We recommend setting up a conda environment with the tools listed below (versions used):
 
-* Python 3, R, Bash
-* AGAT
-* BEDTools
-* DIAMOND
-* gffcompare
-* gffread
-* RegTools
+* Python 3
+* R and library data.table
+* AGAT (v1.7.0)
+* BEDTools (v2.31.1)
+* DIAMOND (v2.1.10.164)
+* gffcompare (v0.12.10)
+* gffread (v0.12.9)
+* RegTools (v1.0.0)
 * Required databases already indexed with DIAMOND: Swiss-Prot, TrEMBL (plant subsets), and PTREP
 
 == Input files
