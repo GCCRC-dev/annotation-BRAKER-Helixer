@@ -2,12 +2,14 @@
 
 This pipeline combines BRAKER4 gene predictions with Helixer-specific models to generate high-confidence (HC) and low-confidence (LC) gene annotations. Models are classified using RNA-seq support, protein homology, and transposable element (TE) evidence.
 
+The pipeline was used to annotate the https://www.biorxiv.org/content/10.64898/2026.10.22.761125v1[_Vellozia tubiflora_ genome].
+
 == Requirements
 
 The workflow requires different software in a conda environment and/or containers. Environment activation and container execution are not included in the scripts and must be configured by the user. We recommend setting up a conda environment with the tools listed below (versions used):
 
 * Python 3
-* R and library data.table
+* R - `data.table` library
 * AGAT (v1.7.0)
 * BEDTools (v2.31.1)
 * DIAMOND (v2.1.10.164)
@@ -27,8 +29,9 @@ The workflow requires different software in a conda environment and/or container
 
 == Running the pipeline
 
-Edit the input paths and `script_dir` in the main Bash script before running.
-If RNA-seq strandedness is not "RF", change it in the script `obtain_rnaseq_support_helixer.sh`.
+*Commands to run the pipeline are in `run.sh`. It is possible to run the whole pipeline at once or step by step.*
+
+Before running, edit the input paths in `run.sh` and if RNA-seq strandedness is not "RF", adjust it in `obtain_rnaseq_support_helixer.sh`.
 
 The workflow is organized into four steps:
 
@@ -62,3 +65,4 @@ Strong PTREP matches are used to identify potentially TE-related models. Detaile
 * Intermediate files are retained for inspection and reproducibility.
 * Input paths, database locations, and software environments must be configured before execution.
 * Code in this repository was developed with the assistance of AI tools.
+
