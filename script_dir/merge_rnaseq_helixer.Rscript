@@ -1,0 +1,133 @@
+library(data.table)
+
+#setwd("~/Documents/workspace/embrapa/vellozia/vper/annotation/curating/helixer-rnaseq/")
+
+####
+#### this script will merge helixer GFF with rna-seq data to produce a ###
+####
+
+
+#### Exon-level coverage ####
+
+exon_cov <- fread("helixer.u.exons.coverage.tsv", header = FALSE)
+
+# BED6 + four bedtools coverage columns
+setnames(exon_cov,
+         c("chr","source","feature","start","end","score","strand","phase",
+           "attr","n_reads","covered","length","fraction"))
+
+exon_cov[, transcript := sub(".*Parent=([^;]+).*", "\\1", attr)]
+
+cov.sum <- exon_cov[, .(
+  n_exons = .N,
+  exonic_length = sum(length),
+  covered_bases = sum(covered),
+  frac_exonic_bases = sum(covered) / sum(length),
+  n_exon_overlaps = sum(n_reads)
+), by = transcript]
+
+#### All predicted introns ####
+
+introns <- fread("helixer.u.introns.bed", header = FALSE)
+
+setnames(introns, c("chr","start","end","transcript","score","strand"))
+
+introns[, intron_id := paste(chr, start, end, strand, transcript, sep = ":")]
+
+# Create an identifier unique to each predicted intron
+intron.sum <- introns[, .(n_introns=.N), by=transcript]
+#intron.sum[n_introns > 20]
+
+# plot intron distribution
+#hist(intron.sum$n_introns, breaks = 0:max(intron.sum$n_introns), col = "grey80", border = "white", xlim = c(0,50), xlab = "Number of introns per transcript", main = "Helixer unique transcripts")
+
+
+#### Exact intron support ####
+# introns from rna-seq obtained from junctions with regtools
+exact <- fread("helixer.u.introns.exact.tsv", header = FALSE)
+
+exact <- exact[, .(
+  chr = V1,
+  start = V2,
+  end = V3,
+  transcript = V4,
+  strand = V6,
+  junction_id = V10,
+  junction_reads = as.numeric(V11)
+)]
+
+exact[, intron_id := paste(
+  chr, start, end, strand, transcript,
+  sep = ":"
+)]
+
+exact.intron <- exact[, .(exact = T, exact_max_reads = max(junction_reads, na.rm=T)), by = intron_id]
+
+#### Boundary support ####
+
+starts <- fread(
+  "helixer.u.shared_starts.tsv",
+  header = FALSE
+)
+
+ends <- fread(
+  "helixer.u.shared_ends.tsv",
+  header = FALSE
+)
+
+supported_starts <- unique(starts$V4)
+supported_ends <- unique(ends$V4)
+
+# add intron supported junction starts and ends to introns table
+introns[, start_supported := intron_id %chin% supported_starts]
+introns[, end_supported := intron_id %chin% supported_ends]
+
+introns[exact.intron, on = "intron_id", `:=`(exact = i.exact, exact_max_reads = i.exact_max_reads)]
+
+introns[is.na(exact), exact := FALSE]
+introns[is.na(exact_max_reads), exact_max_reads := 0]
+
+
+# classifying INTRONS
+introns[, support_class := fcase(
+  exact,
+  "exact",
+  
+  start_supported | end_supported,
+  "boundary_only",
+  
+  default = "none"
+)]
+
+#### merge intron information BY TRANSCRIPT ####
+intron.sum <- introns[, .(
+  n_introns = .N,
+  n_exact = sum(support_class == "exact"),
+  n_boundary_only = sum(support_class == "boundary_only"),
+  n_no_splice_support = sum(support_class == "none"),
+  max_exact_junction_reads = max(exact_max_reads)
+), by = transcript]
+
+
+intron.sum[, frac_exact :=
+             n_exact / n_introns]
+
+intron.sum[, frac_boundary_only :=
+             n_boundary_only / n_introns]
+
+##### SUMMARY #####
+summary_dt <- merge(
+  cov.sum,
+  intron.sum,
+  by = "transcript",
+  all = TRUE
+)
+
+summary_dt[
+  is.na(n_introns),
+  `:=`(
+    n_introns = 0L
+  )
+]
+
+fwrite(summary_dt, "helixer.u_rnaseq_support.tsv", quote=F, sep="\t")
