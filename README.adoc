@@ -1,0 +1,63 @@
+= BRAKER4 + Helixer Annotation Curation
+
+This pipeline combines BRAKER4 gene predictions with Helixer-specific models to generate high-confidence (HC) and low-confidence (LC) gene annotations. Models are classified using RNA-seq support, protein homology, and transposable element (TE) evidence.
+
+== Requirements
+
+The workflow requires different software in a conda environment and/or containers. Environment activation and container execution are not included in the scripts and must be configured by the user. We recommend setting up a conda environment with the tools listed below:
+
+* Python 3, R, Bash
+* AGAT
+* BEDTools
+* DIAMOND
+* gffcompare
+* gffread
+* RegTools
+* Required databases already indexed with DIAMOND: Swiss-Prot, TrEMBL (plant subsets), and PTREP
+
+== Input files
+
+* BRAKER4 GFF3 annotation (`braker.gff3.gz`)
+* BRAKER4 representative proteins (`braker.longest.aa.gz`)
+* BRAKER4 evidence table (`gene_support.tsv`)
+* Helixer GFF3 annotation
+* Genome assembly (FASTA)
+* RNA-seq alignments (merged BAM)
+
+== Running the pipeline
+
+Edit the input paths and `script_dir` in the main Bash script before running.
+If RNA-seq strandedness is not "RF", change it in the script `obtain_rnaseq_support_helixer.sh`.
+
+The workflow is organized into four steps:
+
+1. **BRAKER4 curation:** Evaluate structural support using BRAKER4 evidence, perform DIAMOND searches, and classify genes as HC or LC.
+2. **Helixer curation:** Identify Helixer-specific models using gffcompare, evaluate RNA-seq and protein support, and classify models as HC or LC.
+3. **Merge and validation:** Combine BRAKER4 and Helixer-specific predictions, remove models with incomplete coding sequences, and validate the annotation.
+4. **Final annotation:** Rename gene IDs, separate HC and LC annotations, and generate final GFF3 and sequence files.
+
+The main script can be executed as a whole or section by section, provided that the preceding steps have generated the required intermediate files.
+
+== Output structure
+
+[source,text]
+----
+curating/
+├── braker/       # BRAKER4 evidence and classification
+├── helixer/      # Helixer-specific models and classification
+│   └── rna/      # RNA-seq support analysis
+└── final/        # Merged and curated annotations and stats
+----
+
+== Classification
+
+BRAKER4 predictions are evaluated using transcript-level structural evidence, with additional protein homology support. Helixer-specific models are evaluated using RNA-seq exon coverage, splice-junction support, and protein homology.
+
+Strong PTREP matches are used to identify potentially TE-related models. Detailed classification criteria are implemented in the corresponding Python scripts.
+
+== Notes
+
+* BRAKER4 is used as the primary annotation, supplemented with Helixer-specific predictions.
+* Intermediate files are retained for inspection and reproducibility.
+* Input paths, database locations, and software environments must be configured before execution.
+* Code in this repository was developed with the assistance of AI tools.
